@@ -6,6 +6,7 @@ import getpass
 import os
 
 from services.langchain import ResearchAgent
+from services.paper_retriever import PaperRetriever
 
 
 def validate_date(date_str):

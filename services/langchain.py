@@ -1,5 +1,6 @@
 from langchain.chat_models import init_chat_model
 from models.query_keywords import QueryKeywords
+from services.paper_retriever import PaperRetriever
 
 
 class ResearchAgent:
@@ -25,7 +26,19 @@ class ResearchAgent:
         """
         print("Executing the research pipeline...")
         print(f"Query: {self.query}")
-        print(self.get_query_keywords(self.query))
+        #keywords = self.get_query_keywords(self.query)
+        keywords = ['person re-identification', 'neural networks', 'occlusion handling', 'multi-person tracking', 'deep learning', 'person ReID', 'occlusion robust', 'identity disambiguation', 'pedestrian tracking']
+        keywords = ['person re-identification']
+        print("Searching articles in Semantic Scholar database...")
+        retriever = PaperRetriever()
+        papers = retriever.retrieve_papers(
+            keywords=keywords,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            focus=self.focus,
+            max_papers=10
+        )
+        retriever.print_papers(papers)
 
 
     def get_query_keywords(self, query):

@@ -583,6 +583,15 @@ wheels = [
 ]
 
 [[package]]
+name = "openapi-generator-cli"
+version = "7.12.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/7d/8f5bb83112179efd887b60390e3b5fdbb38bd993965ef4ce88740d8a6f29/openapi_generator_cli-7.12.0.tar.gz", hash = "sha256:11dc4fd67fc7d839572ae8e29fb1dee5892195a7ac88b98e41a2cd8105e3250f", size = 27094673 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/a8/23b4e7fca4e7015f461c2c520bc49b9b57a6635fd404dd77b0b6f917493e/openapi_generator_cli-7.12.0-py3-none-any.whl", hash = "sha256:cf97e0e40bacc66ca70963845e52b0c003aaab85da7f1d10cc25abf2f1c8bb6e", size = 27108048 },
+]
+
+[[package]]
 name = "orjson"
 version = "3.10.16"
 source = { registry = "https://pypi.org/simple" }
@@ -796,7 +805,9 @@ dependencies = [
     { name = "langchain", extra = ["anthropic"] },
     { name = "langchain-community" },
     { name = "langgraph" },
+    { name = "openapi-generator-cli" },
     { name = "pydantic" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -804,7 +815,9 @@ requires-dist = [
     { name = "langchain", extras = ["anthropic"], specifier = ">=0.3.23" },
     { name = "langchain-community", specifier = ">=0.3.21" },
     { name = "langgraph", specifier = ">=0.3.29" },
+    { name = "openapi-generator-cli", specifier = ">=7.12.0" },
     { name = "pydantic", specifier = ">=2.11.3" },
+    { name = "requests", specifier = ">=2.32.3" },
 ]
 
 [[package]]
