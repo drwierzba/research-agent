@@ -1,6 +1,9 @@
+import os
+
 from langchain.chat_models import init_chat_model
 from models.query_keywords import QueryKeywords
 from services.paper_retriever import PaperRetriever
+from services.vector_db import VectorDb
 
 
 class ResearchAgent:
@@ -38,6 +41,13 @@ class ResearchAgent:
             focus=self.focus,
             max_papers=10
         )
+        # Create a vector database instance
+        base_dir = os.path.dirname(retriever.DOWNLOAD_DIR)
+        vector_db = VectorDb(base_dir)
+
+        # Store the papers in the vector database
+        vector_db.create_embeddings_and_store(papers)
+
         retriever.print_papers(papers)
 
 
