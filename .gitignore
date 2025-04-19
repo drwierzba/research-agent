@@ -76,3 +76,6 @@ venv.bak/
 data/*
 # Keep the data folder itself
 !data/.gitkeep
+
+#logs
+logs/*
