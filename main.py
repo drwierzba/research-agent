@@ -1,13 +1,15 @@
 import argparse
-import re
+import logging
 from datetime import datetime
 import sys
-import getpass
 import os
 
+from classes.model_adapter.model_adapter_factory import ModelAdapterFactory
+from utils.error_handler import ResearchAgentError, handle_exceptions
+from utils.logging_config import configure_logging
+from utils.logger import Logger
+from classes.model_adapter.claude_model_adapter import ClaudeModelAdapter
 from services.langchain import ResearchAgent
-from services.paper_retriever import PaperRetriever
-
 
 def validate_date(date_str):
     """Validate date string format (YYYY-MM-DD)."""
@@ -42,8 +44,13 @@ def parse_arguments():
     parser.add_argument('--end-date', type=validate_date, help='End date for paper search (format: YYYY-MM-DD)')
     parser.add_argument('--paper-count', type=validate_positive_int, default=20,
                         help='Number of papers to retrieve (default: 20)')
-    parser.add_argument('--focus', type=str, choices=['methodology', 'datasets', 'performance', 'all'],
-                        default='all', help='Focus area of the research (default: all)')
+    parser.add_argument('--focus', type=str, default='', help='Additional summary focus')
+    parser.add_argument(
+        '--log-level',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        default='INFO',
+        help='Set the logging level'
+    )
 
     args = parser.parse_args()
 
@@ -57,31 +64,29 @@ def parse_arguments():
 
     return args
 
-
+@handle_exceptions(error_type=ResearchAgentError)
 def main():
     """Main entry point for the research agent."""
-    try:
-        args = parse_arguments()
+    args = parse_arguments()
+    log_level = getattr(logging, args.log_level)
+    logger = configure_logging(log_level=log_level)
 
-        # Print the validated input
-        print("\n=== Research Agent Parameters ===")
-        print(f"Query: {args.query}")
-        print(f"Date Range: {args.start_date or 'Not specified'} to {args.end_date or 'Not specified'}")
-        print(f"Number of Papers: {args.paper_count}")
-        print(f"Focus Area: {args.focus}")
-        print("================================\n")
+    # Print the validated input
+    Logger.info(logger,"\n=== Research Agent Parameters ===")
+    Logger.info(logger,f"Query: {args.query}")
+    Logger.info(logger,f"Date Range: {args.start_date or 'Not specified'} to {args.end_date or 'Not specified'}")
+    Logger.info(logger,f"Number of Papers: {args.paper_count}")
+    Logger.info(logger,f"Focus Area: {args.focus}")
+    Logger.info(logger,"================================\n")
 
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            print("ANTHROPIC_API_KEY undefined! Please set it in your environment variables.")
-            return 1
-        research_agent = ResearchAgent(args)
-        research_agent.research_pipeline()
-
-        print("Research agent complete.")
-
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        Logger.info(logger,"ANTHROPIC_API_KEY undefined! Please set it in your environment variables.")
         return 1
+    model_adapter = ModelAdapterFactory.create_adapter("claude")
+    research_agent = ResearchAgent(args, model_adapter)
+    research_agent.research_pipeline()
+
+    Logger.info(logger,"Research agent complete.")
 
     return 0
 

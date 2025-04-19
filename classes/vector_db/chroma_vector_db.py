@@ -1,10 +1,16 @@
 import os
-import chromadb
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-class VectorDb:
-    def __init__(self, base_dir, model_name="sentence-transformers/all-MiniLM-L6-v2"):
+from classes.vector_db.vector_database import VectorDatabase
+from config.app_config import AppConfig
+from utils.document_processor import DocumentProcessor
+from utils.error_handler import handle_exceptions, DatabaseError
+from utils.logger import Logger
+
+
+class ChromaVectorDb(VectorDatabase):
+    def __init__(self, base_dir, model_name=AppConfig.DEFAULT_EMBEDDING_MODEL):
         """
         Initialize the VectorDb class.
         
@@ -12,13 +18,15 @@ class VectorDb:
             base_dir (str): The base directory where the vector database will be stored
             model_name (str): The embedding model name to use
         """
-        self.db_directory = os.path.join(base_dir, "vector_db")
+        self.logger = Logger.get_logger(self.__class__.__name__)
+        self.db_directory = os.path.join(base_dir, AppConfig.VECTOR_DB_FOLDER)
         os.makedirs(self.db_directory, exist_ok=True)
         self.model_name = model_name
         
         # Initialize embeddings model
         self.embeddings = HuggingFaceEmbeddings(model_name=self.model_name)
-        
+
+    @handle_exceptions(error_type=DatabaseError)
     def create_embeddings_and_store(self, papers, append=True):
         """
         Create embeddings for paper abstracts and store them in a Chroma vector database.
@@ -47,7 +55,7 @@ class VectorDb:
             
             # Add papers that aren't already in the database
             papers_added = 0
-            papers_added = self.prepare_documents(documents, existing_ids, ids, metadatas, papers, papers_added)
+            papers_added = DocumentProcessor.prepare_documents(documents, existing_ids, ids, metadatas, papers, papers_added)
             
             # Add documents to the existing database
             if documents:
@@ -56,14 +64,14 @@ class VectorDb:
                     metadatas=metadatas,
                     ids=ids
                 )
-                print(f"Added embeddings for {papers_added} new papers to the existing database")
+                Logger.info(self.logger, f"Added embeddings for {papers_added} new papers to the existing database")
             else:
-                print("No new papers to add to the database")
+                Logger.info(self.logger, "No new papers to add to the database")
                 
         else:
             # Create a new database
             if not append and db_exists:
-                print("Creating a new vector database (overwriting existing one)")
+                Logger.info(self.logger, "Creating a new vector database (overwriting existing one)")
             
             # Prepare documents for the vector database
             documents = []
@@ -71,7 +79,7 @@ class VectorDb:
             ids = []
             existing_ids = set()
             papers_added = 0
-            papers_added = self.prepare_documents(documents, existing_ids, ids, metadatas, papers, papers_added)
+            papers_added = DocumentProcessor.prepare_documents(documents, existing_ids, ids, metadatas, papers, papers_added)
             
             # Create the Chroma vector store
             vectordb = Chroma.from_texts(
@@ -81,34 +89,11 @@ class VectorDb:
                 ids=ids,
                 persist_directory=self.db_directory
             )
-            print(f"Created a new database with embeddings for {len(documents)} papers")
+            Logger.info(self.logger, f"Created a new database with embeddings for {len(documents)} papers")
         
         return vectordb
 
-    def prepare_documents(self, documents, existing_ids, ids, metadatas, papers, papers_added):
-        for paper in papers:
-            if 'abstract' in paper and paper['abstract'] and paper.get('paperId'):
-                paper_id = f"paper_{paper.get('paperId')}"
-
-                # Skip if this paper is already in the database
-                if paper_id in existing_ids:
-                    continue
-
-                documents.append(paper['abstract'])
-
-                # Create metadata for each paper
-                metadata = {
-                    'title': paper.get('title', ''),
-                    'authors': ', '.join([author.get('name', '') for author in paper.get('authors', [])]),
-                    'year': paper.get('year', ''),
-                    'url': paper.get('url', ''),
-                    'paperId': paper.get('paperId', '')
-                }
-                metadatas.append(metadata)
-                ids.append(paper_id)
-                papers_added += 1
-        return papers_added
-
+    @handle_exceptions(error_type=DatabaseError, default_return= [])
     def query_vector_database(self, query, n_results=5):
         """
         Query the vector database for papers similar to the query.
@@ -122,7 +107,7 @@ class VectorDb:
         """
         # Check if the vector database exists
         if not os.path.exists(os.path.join(self.db_directory, "chroma.sqlite3")):
-            print("Vector database not found. Create it first by calling create_embeddings_and_store().")
+            Logger.info(self.logger, "Vector database not found. Create it first by calling create_embeddings_and_store().")
             return []
         
         # Load the vector database
